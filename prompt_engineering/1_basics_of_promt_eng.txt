@@ -1,0 +1,15 @@
+Two types of Large Language Models(LLMs):
+* Base LLMs: Predicts next word, based on text training data
+  * Examples are 
+    Today morning I went movie
+	                     -----
+    Today morning I went for hiking
+	                     ----------
+  * It might the give wrong answers if you ask something like "What is population of India?", It might response with below prompts.
+    what is the India largest city?
+	what is the India's capital?
+
+* Instruction Tuned LLM's:
+  Instruction Tuned LLM's are primarily built on Base LLMs and then fine tuned with instructions(inputs and outputs) to achieve specific task.
+  often used Reinforcement Learning With Human Feedback(RLHF) for fine tuning. 
+------------------------------------------------------------------------------------------------------------------------------
