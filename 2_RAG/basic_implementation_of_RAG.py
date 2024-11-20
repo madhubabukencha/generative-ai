@@ -80,7 +80,7 @@ def create_chunks(documents: list) -> list[dict]:
     return chunked_documents
 
 
-def get_openai_embedding(text: str):
+def get_openai_embedding(client, text: str):
     """
     Function to generate embeddings using OpenAI API by taking
     text as input
@@ -91,10 +91,58 @@ def get_openai_embedding(text: str):
     return embedding
 
 
+def query_documents(vec_db_coll, question: str, n_results: int = 2) -> list:
+    """
+    This function takes vector database collection as one of it's input
+    and searches for the given question in the db and returns the given
+    number of results
+    :param question: str
+    :type  question: Question from the user
+    :param n_results: int
+    :type  n_results: Number of answers to return
+
+    :returns: Returns the list of documents
+    :rtype: list
+    """
+    results = vec_db_coll.query(query_texts=question, n_results=n_results)
+    # print(results)
+    relevant_chunks = [doc for sublist in results["documents"]
+                       for doc in sublist]
+    return relevant_chunks
+
+
+# Function to generate a response from OpenAI
+def generate_response(client, question, relevant_chunks):
+    context = "\n\n".join(relevant_chunks)
+    prompt = (
+        "You are an assistant for question-answering tasks. Use the following pieces of "
+        "retrieved context to answer the question. If you don't know the answer, say that you "
+        "don't know. Use three sentences maximum and keep the answer concise."
+        "\n\nContext:\n" + context + "\n\nQuestion:\n" + question
+    )
+
+    response = client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {
+                "role": "system",
+                "content": prompt,
+            },
+            {
+                "role": "user",
+                "content": question,
+            },
+        ],
+    )
+
+    answer = response.choices[0].message
+    return answer
+
+
 if __name__ == "__main__":
     # Setting up OpenAI Environment
     openai_key = os.getenv("OPENAI_API_KEY")
-    client = OpenAI(api_key=openai_key)
+    openai_client = OpenAI(api_key=openai_key)
 
     # Setting up OpenAI Embeddings
     openai_ef = embedding_functions.OpenAIEmbeddingFunction(
@@ -114,18 +162,31 @@ if __name__ == "__main__":
     documents = load_documents_from_directory(DIR_PATH)
 
     # Generate embeddings for the document chunks
-    chunked_docs = create_chunks(documents=documents)
+    # chunked_docs = create_chunks(documents=documents)
     # for doc in tqdm(chunked_docs):
-    #     doc["embedding"] = get_openai_embedding(doc["text"])
+    #     doc["embedding"] = get_openai_embedding(openai_client, doc["text"])
+    # with open("gpt-embedding.pkl", "wb") as file:
+    #     pickle.dump(chunked_docs, file)
 
     with open("gpt-embedding.pkl", "rb") as file:
         chunked_docs = pickle.load(file)
 
-    print("Upsert documents with embeddings into Chroma")
+    print("Upsert documents into Chroma")
     for doc in tqdm(chunked_docs):
         collection.upsert(
             ids=[doc["id"]],
             documents=[doc["text"]],
             embeddings=[doc["embedding"]]
         )
-    print("Upsert documents with embeddings into Chroma")
+    print("Upsert documents into Chroma completed")
+
+    print("Extracting relevant chunks from db...")
+    QUESTION = "Who acquired databricks?"
+    relevant_chunks = query_documents(collection, question=QUESTION)
+    print("Extracting relevant documents is completed")
+
+    print("Generating response from the GPT...")
+    answer = generate_response(openai_client, QUESTION, relevant_chunks)
+    print(answer)
+    print("Generating response form GPT is completed.")
+
