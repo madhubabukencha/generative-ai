@@ -1,0 +1,18 @@
+########## RecursiveCharacterTextSplitter##########
+
+-> separators=["\n\n", "\n", ". ", " ", ""]:
+This argument specifies the characters or sequences of characters 
+that will be used to identify potential chunk boundaries. In this case,
+ the splitter will prioritize splitting at double newlines, single 
+ newlines, periods followed by a space, spaces, and finally, at character 
+ boundaries if no other separators are found.
+
+ 
+>>> character_splitter = RecursiveCharacterTextSplitter(
+    separators=["\n\n", "\n", ". ", " ", ""], chunk_size=10, chunk_overlap=0
+)
+
+>>> sen = ["This. is first sentence", "\nThis is second sentence for your information", "\n\nThird Sentences", "Fourth Sentence>>> character_split_texts = character_splitter.split_text("\n\n".join(sen))
+>>> character_split_texts
+['This', '. is first', 'sentence', 'This is', 'second', 'sentence', 'for your', 'informati', 'on', 'Third', 'Sentences', 'Fourth', 'Sentences']
+>>>
